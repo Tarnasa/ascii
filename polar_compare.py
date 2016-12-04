@@ -70,13 +70,24 @@ def score_cell(im, w, h, xoff, yoff, x_offsets, y_offsets):
     for y in range(1, h, 2):
         xpoints = []
         for x in range(1, w, 2):
+            xpoints.append(score_point(im, x+xoff, y+yoff, x_offsets, y_offsets))
+            """
             bins = []
             for xoffs, yoffs in zip(x_offsets, y_offsets):
                 bins.append(np.sum(im[yoffs+y+yoff, xoffs+x+xoff]))
             # TODO: Apply +xoff once to entire x_offsets
             xpoints.append(bins)
+            """
         points.append(xpoints)
     return np.array(points)
+
+
+def score_point(im, x, y, x_offsets, y_offsets):
+    bins = []
+    for xoffs, yoffs in zip(x_offsets, y_offsets):
+        bins.append(np.average(im[yoffs+y, xoffs+x]))
+    return bins
+
 
 
 def generate_offsets_old(r, r_sections=5, theta_sections=12):
@@ -113,6 +124,7 @@ def generate_offsets_per_bin(r, r_sections=5, theta_sections=12):
                 # log a / log b = log_b(a)
                 radius_index = int(math.log((x*x + y*y)**0.5, r) * r_sections)
                 theta = math.atan2(y, x) + math.pi  # atan2 goes from -pi to pi
+                theta = (theta + (2*math.pi/theta_sections)/2) % (2*math.pi)
                 theta_index = int((theta / (2*math.pi)) * theta_sections)
                 if theta_index == theta_sections:  # Turn closed to open interval
                     theta_index -= 1
@@ -155,9 +167,12 @@ if __name__ == '__main__':
     # Draw bins
     xspb, yspb = generate_offsets_per_bin(33)
     xoff, yoff = 23, 40
+    print('shape', scene.blurred.shape)
+    scores = score_point(scene.image, xoff+padding, yoff+padding, xspb, yspb)
     for bin, (xs, ys) in enumerate(zip(xspb, yspb)):
         for x, y in zip(xs, ys):
-            colored[y+yoff+padding, x+xoff+padding, 0:3] = (bin * 255) / 60
+            #colored[y+yoff+padding, x+xoff+padding, 0:3] = (bin * 255) / 60
+            colored[y+yoff+padding, x+xoff+padding, 0:2] = scores[bin]
 
 
     # Tint each cell by it's score

@@ -8,10 +8,11 @@ from scipy.misc import imresize
 
 import numpy as np
 import math
+import itertools
 
 from collections import namedtuple, defaultdict
 
-Scene = namedtuple('Scene', ('image', 'scores', 'offsets', 'blurred', 'padding'))
+Scene = namedtuple('Scene', ('image', 'scores', 'offsets', 'blurred', 'padding', 'grayness'))
 
 
 
@@ -41,32 +42,29 @@ def score_all(image, cell_width, cell_height, r_sections=5, theta_sections=12):
     # Calculate offsets needed by score_cell
     offsets = generate_offsets_per_bin(r, r_sections, theta_sections)
     x_offsets, y_offsets = offsets
-    total_bins = r_sections * theta_sections
+    total_bins = len(x_offsets)
     # Blur image so that log-polar bins can be sampled by looking at one point
     blurred = gaussian_filter(image, 3.0, mode='nearest', cval=0)
     # Calculate scores of all subsections
     x_cells, y_cells = w / cell_width, h / cell_height
-    scores = np.zeros((y_cells, x_cells, cell_height*cell_width*total_bins/4))
+    scores = np.zeros((y_cells, x_cells,
+        (cell_height/2),
+        (cell_width/2),
+        total_bins))
+    print(cell_height, cell_width, total_bins)
     for yi, y in enumerate(range(padding, h+padding, cell_height)):
         for xi, x in enumerate(range(padding, w+padding, cell_width)):
+            print(xi, yi, x, y)
             scores[yi, xi] = score_cell(blurred, cell_width, cell_height,
-                    x, y, x_offsets, y_offsets).ravel()
-    return Scene(image, scores, offsets, blurred, padding)
-
-
-def score_cell_old(im, w, h, xoff, yoff, offsets):
-    # TODO use numpy arrays
-    bins = []
-    for y in range(1, h, 2):
-        xbins = []
-        for x in range(1, w, 2):
-            xbins.append(im[offsets[1] + y+yoff, offsets[0] + x+xoff])
-        bins.append(xbins)
-    return np.sum(np.array(bins))
+                    x, y, x_offsets, y_offsets)
+    # Calculate total amount of ink
+    grayness = np.sum(image)
+    return Scene(image, scores, offsets, blurred, padding, grayness)
 
 
 def score_cell(im, w, h, xoff, yoff, x_offsets, y_offsets):
     points = []
+    i = 0
     for y in range(1, h, 2):
         xpoints = []
         for x in range(1, w, 2):
@@ -78,37 +76,16 @@ def score_cell(im, w, h, xoff, yoff, x_offsets, y_offsets):
             # TODO: Apply +xoff once to entire x_offsets
             xpoints.append(bins)
             """
+            i += 1
         points.append(xpoints)
     return np.array(points)
 
 
 def score_point(im, x, y, x_offsets, y_offsets):
     bins = []
-    for xoffs, yoffs in zip(x_offsets, y_offsets):
+    for xoffs, yoffs in itertools.izip(x_offsets, y_offsets):
         bins.append(np.average(im[yoffs+y, xoffs+x]))
     return bins
-
-
-
-def generate_offsets_old(r, r_sections=5, theta_sections=12):
-    """
-    Generates a numpy array like:
-    [[-1, 0, 1, 0], [0, 1, 0, -1]]
-    representing the points [[-1, 0], [0, 1], [1, 0], [0, -1]]
-    For the given log-polar paramters
-    """
-    offsets = np.zeros((r_sections * theta_sections, 2), dtype=np.float)
-    i = 0
-    for ri in range(1, r_sections+1):
-        for ti in range(0, theta_sections):
-            radius = ri * (r / r_sections)
-            # TODO: Vectorize sin and cos operations
-            theta = (math.pi * ti * 2) / theta_sections
-            offsets[i][0] = radius * math.cos(theta)
-            offsets[i][1] = radius * math.sin(theta)
-            i += 1
-    offsets = np.asarray(np.around(offsets), dtype=int)
-    return offsets.transpose()
 
 
 def generate_offsets_per_bin(r, r_sections=5, theta_sections=12):
@@ -139,7 +116,9 @@ def generate_offsets_per_bin(r, r_sections=5, theta_sections=12):
                 # Add center point to some bin
                 x_offsets[0].append(x)
                 y_offsets[0].append(y)
-    for bin_index in range(total_bins):
+    x_offsets = filter(None, x_offsets)
+    y_offsets = filter(None, y_offsets)
+    for bin_index in range(len(x_offsets)):
         x_offsets[bin_index] = np.array(x_offsets[bin_index], dtype=np.int)
         y_offsets[bin_index] = np.array(y_offsets[bin_index], dtype=np.int)
     print('theta sections', per_theta)
@@ -157,6 +136,8 @@ if __name__ == '__main__':
     w, h = 16, 22
     scene = score_all(image, w, h)
 
+    print(repr(scene.scores[0]), len(scene.scores))
+
     v, u = scene.image.shape
     colored = np.zeros((v, u, 4), dtype=np.uint8)
     padding = scene.padding
@@ -167,7 +148,6 @@ if __name__ == '__main__':
     # Draw bins
     xspb, yspb = generate_offsets_per_bin(33)
     xoff, yoff = 23, 40
-    print('shape', scene.blurred.shape)
     scores = score_point(scene.image, xoff+padding, yoff+padding, xspb, yspb)
     for bin, (xs, ys) in enumerate(zip(xspb, yspb)):
         for x, y in zip(xs, ys):
@@ -196,5 +176,5 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots()
     ax.imshow(colored, cmap='gray', interpolation='nearest')
-    plt.show()
+    #plt.show()
 

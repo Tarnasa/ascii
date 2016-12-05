@@ -1,7 +1,8 @@
 from polar import score_all
+from multiblur import score_rect, compare_scores
 import numpy as np
 
-def compare(scene1, scene2)
+def compare(scene1, scene2):
     diff = scene1.scores[0, 0] - scene2.scores[0, 0]
     diff = np.sum(np.linalg.norm(diff, ord=1, axis=2))
     diff /= scene1.grayness + scene2.grayness
@@ -26,15 +27,18 @@ if __name__ == '__main__':
             image = 255 - np.min(image, axis=2)
         else:
             image = 255 - image
-        scenes[filename] = score_all(image, w, h)
+        #scenes[filename] = score_all(image, w, h)
+        scenes[filename] = score_rect(image, 0, 0, w, h, w/8, h/8, 5)
 
     target = scenes['test.png']
-    compairsons = []
+    comparisons = []
     for filename, scene in scenes.items():
-        diff = scene.scores[0, 0] - target.scores[0, 0]
-        diff = np.sum(np.linalg.norm(diff, ord=1, axis=2))
-        diff /= scene.grayness + target.grayness
-        compairsons.append((diff, filename))
-    for score, filename in sorted(compairsons):
+        #diff = scene.scores[0, 0] - target.scores[0, 0]
+        #diff = np.sum(np.linalg.norm(diff, ord=1, axis=2))
+        #diff /= scene.grayness + target.grayness
+        #compairsons.append((diff, filename))
+        diff = compare_scores(scene, target)
+        comparisons.append((diff, filename))
+    for score, filename in sorted(comparisons, key=lambda p: p[0]):
         print(score, filename)
 

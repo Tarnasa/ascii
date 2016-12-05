@@ -88,7 +88,10 @@ def score_point(im, x, y, x_offsets, y_offsets):
     return bins
 
 
+_offsets_cache = dict()
 def generate_offsets_per_bin(r, r_sections=5, theta_sections=12):
+    if (r, r_sections, theta_sections) in _offsets_cache:
+        return _offsets_cache[(r, r_sections, theta_sections)]
     # This funcion is not meant to be called multiple times
     per_theta = [0 for _ in range(theta_sections)] # TODO Remove
     per_radii = [0 for _ in range(r_sections)]
@@ -123,6 +126,7 @@ def generate_offsets_per_bin(r, r_sections=5, theta_sections=12):
         y_offsets[bin_index] = np.array(y_offsets[bin_index], dtype=np.int)
     print('theta sections', per_theta)
     print('radius sections', per_radii)
+    _offsets_cache[(r, r_sections, theta_sections)] = x_offsets, y_offsets
     return x_offsets, y_offsets
 
 

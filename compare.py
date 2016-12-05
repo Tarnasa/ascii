@@ -28,7 +28,7 @@ if __name__ == '__main__':
         else:
             image = 255 - image
         #scenes[filename] = score_all(image, w, h)
-        scenes[filename] = score_rect(image, 0, 0, w, h, w/8, h/8, 5)
+        scenes[filename] = score_rect(image, 0, 0, w, h, w/8, h/8, 3)
 
     target = scenes['test.png']
     comparisons = []

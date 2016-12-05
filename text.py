@@ -58,5 +58,5 @@ if __name__ == '__main__':
     #import argparse
     #parser = argparse.ArgumentParser()
     for code in range(33, 127):
-        render_text_to_file(chr(code), 'out/' + str(code) + '.png', size=90)
+        render_text_to_file(chr(code), 'out/' + str(code) + '.png', size=32)
 

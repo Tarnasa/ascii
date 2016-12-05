@@ -1,13 +1,13 @@
 import numpy as np
 
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage.filters import gaussian_filter, uniform_filter
 from collections import namedtuple
 
 BlurScene = namedtuple('BlurScene', ('features', 'norm'))
 
 
 def calculate_normalizer(scores):
-    v = np.sum(scores) / sum(scores.shape)
+    v = (np.sum(scores) / sum(scores.shape))**0.3
     if v < 0:
         print('NO!', v, scores)
     return v
@@ -15,7 +15,9 @@ def calculate_normalizer(scores):
 def generate_blurred_images(image, blur_factor, levels):
     images = []
     for blur_level in range(levels):
-        images.append(gaussian_filter(image, blur_factor*blur_level, mode='reflect', cval=0))
+        #images.append(gaussian_filter(image, blur_factor*blur_level, mode='reflect', cval=0))
+        blurred = uniform_filter(image, blur_factor*blur_level, mode='reflect')
+        images.append(blurred / (blur_factor+1))
     # TODO 'constant', or 'reflect'
     return images
 
@@ -42,7 +44,7 @@ def draw_blur_levels():
     ax = axes.ravel()
 
     for blur_level in range(6):
-        blurred = gaussian_filter(image, 6.0*blur_level, mode='nearest', cval=0)
+        blurred = uniform_filter(image, 3.0*blur_level, mode='reflect', cval=0)
 
         ax[blur_level].imshow(blurred, cmap='gray', interpolation='nearest')
         ax[blur_level].set_title(str(blur_level), fontsize=20)

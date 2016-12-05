@@ -37,6 +37,15 @@ def convert(image, alphabet):
             print(xi, yi, x, y)
             scene = score_rect(images, x, y, cw, ch, cw/8, ch/8, 3)
             filename = find_best_char(scene, alphabet)
+
+            if xi == 22 and yi == 20:
+                print('hey', filename, compare_scores(scene, alphabet.scores[filename]))
+                print('space', filename, compare_scores(scene, alphabet.scores['out/32.png']))
+                print('light', scene.norm)
+                print('light', alphabet.scores['out/126.png'].norm)
+            if xi == 33 and yi == 20:
+                print('light', scene.norm)
+
             line.append(chr(int(filename[4:-4])))
         art.append(line)
     return '\n'.join(''.join(line) for line in art)
@@ -67,9 +76,9 @@ def generate_alphabet(pattern, levels=3):
         h, w = image.shape
         blur_factor = min(w/8, h/8)/2
         blur_factor = 0
-        images = generate_blurred_images(image, 0, levels)
+        images = generate_blurred_images(image, blur_factor, levels)
 
-        if filename == '!out/124.png':
+        if filename == '!out/126.png':
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots()
             ax.imshow(images[2], cmap='gray', interpolation='nearest')

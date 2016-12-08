@@ -9,6 +9,9 @@ from skimage import io
 from scipy.misc import imresize
 import numpy as np
 
+from sklearn import svm
+import random
+
 Alphabet = namedtuple('Alphabet', ('scores', 'cw', 'ch'))
 
 def fit(w, h, subw, subh):
@@ -21,7 +24,8 @@ def fit(w, h, subw, subh):
     return new_w, new_h
 
 
-def convert(image, alphabet):
+def convert(image, alphabet, blur_levels=3):
+    clf = svm_train(blur_levels)
     ch, cw = alphabet.ch, alphabet.cw
     h, w = image.shape
     w, h = fit(w, h, cw, ch)
@@ -29,22 +33,22 @@ def convert(image, alphabet):
     image = image.astype(np.float32) / 255.
     blur_factor = min(cw/8, ch/8)/2
     blur_factor = 0
-    images = generate_blurred_images(image, blur_factor, 3)
+    images = generate_blurred_images(image, blur_factor, blur_levels)
     art = []
     for yi, y in enumerate(range(0, h, ch)):
         line = []
         for xi, x in enumerate(range(0, w, cw)):
-            print(xi, yi, x, y)
-            scene = score_rect(images, x, y, cw, ch, cw/8, ch/8, 3)
-            filename = find_best_char(scene, alphabet)
-
-            if xi == 22 and yi == 20:
-                print('hey', filename, compare_scores(scene, alphabet.scores[filename]))
-                print('space', filename, compare_scores(scene, alphabet.scores['out/32.png']))
-                print('light', scene.norm)
-                print('light', alphabet.scores['out/126.png'].norm)
-            if xi == 33 and yi == 20:
-                print('light', scene.norm)
+            #print(xi, yi, x, y)
+            scene = score_rect(images, x, y, cw, ch, cw/8, ch/8, blur_levels)
+            #filename = find_best_char(scene, alphabet)
+            filename = random.choice(clf.predict(scene.features))
+            #if xi == 22 and yi == 20:
+            #    print('hey', filename, compare_scores(scene, alphabet.scores[filename]))
+            #    print('space', filename, compare_scores(scene, alphabet.scores['out/32.png']))
+            #    print('light', scene.norm)
+            #    print('light', alphabet.scores['out/126.png'].norm)
+            #if xi == 33 and yi == 20:
+            #    print('light', scene.norm)
 
             line.append(chr(int(filename[4:-4])))
         art.append(line)
@@ -56,7 +60,7 @@ def find_best_char(scene, alphabet):
             key=lambda pair: compare_scores(scene, pair[1]))[0]
 
 def load_image(filename):
-    print('loading ...', filename)
+    #print('loading ...', filename)
     image = io.imread(filename)
     image = image.astype(np.float32)
     m = np.max(image)
@@ -88,23 +92,33 @@ def generate_alphabet(pattern, levels=3):
         scenes[filename] = scene
     return Alphabet(scenes, w, h)
 
-if __name__ == '__main__':
-    """
-    sp = load_image('out/33.png')
-    print(repr(sp))
-    import sys
-    sys.exit(0)
-    """
+def svm_train(blur_levels=3):
+    alphabet = generate_alphabet('out/*.png', blur_levels)
+    X = []
+    y = []
+    for i in range(32, 126):
+        img = load_image('out/{}.png'.format(i))
+        h, w = img.shape
+        images = generate_blurred_images(img, min(w/8, h/8)/2, blur_levels)
+        scene = score_rect(images, 0, 0, w, h, w/8, h/8, blur_levels)
+        #print(scene[0][1])
 
+        # Use the blur levels as the training feature
+        X.append(sum(scene[0]))
+        y.append('out/{}.png'.format(i))
+
+    clf = svm.SVC(gamma=0.001, C=100)
+
+    X = np.array(X)
+    y = np.array(y)
+    #print(X)
+    clf.fit(X,y)
+
+    return clf
+
+if __name__ == '__main__':
     alphabet = generate_alphabet('out/*.png')
     image = load_image('test.png')
-    art = convert(image, alphabet)
+    art = convert(image, alphabet, blur_levels=3)
     print(art)
-
-    img = load_image('out/33.png')
-    h, w = img.shape
-    images = generate_blurred_images(img, min(w/8, h/8)/2, 3)
-    scene = score_rect(images, 0, 0, w, h, w/8, h/8, 3)
-    thing = find_best_char(scene, alphabet)
-    print(compare_scores(alphabet.scores[thing], scene))
 

@@ -25,6 +25,8 @@ def fit(w, h, subw, subh):
 
 
 def convert(image, alphabet, blur_levels=3):
+    alphabet = generate_alphabet('out/*.png', blur_levels)
+
     clf = svm_train(blur_levels)
     ch, cw = alphabet.ch, alphabet.cw
     h, w = image.shape
@@ -32,7 +34,7 @@ def convert(image, alphabet, blur_levels=3):
     image = imresize(image*255, (h, w), interp='bilinear')
     image = image.astype(np.float32) / 255.
     blur_factor = min(cw/8, ch/8)/2
-    blur_factor = 0
+    #blur_factor = 0
     images = generate_blurred_images(image, blur_factor, blur_levels)
     art = []
     for yi, y in enumerate(range(0, h, ch)):
@@ -41,7 +43,16 @@ def convert(image, alphabet, blur_levels=3):
             #print(xi, yi, x, y)
             scene = score_rect(images, x, y, cw, ch, cw/8, ch/8, blur_levels)
             #filename = find_best_char(scene, alphabet)
-            filename = random.choice(clf.predict(scene.features))
+
+            #print(clf.predict(scene.features))
+            fv = []
+            for j in range(blur_levels):
+                fv.extend(scene.features[j])
+            fv = np.array(fv).reshape(1, -1)
+
+            i = random.choice(clf.predict(fv))
+            filename = "out/{}.png".format(i)
+
             #if xi == 22 and yi == 20:
             #    print('hey', filename, compare_scores(scene, alphabet.scores[filename]))
             #    print('space', filename, compare_scores(scene, alphabet.scores['out/32.png']))
@@ -96,18 +107,21 @@ def svm_train(blur_levels=3):
     alphabet = generate_alphabet('out/*.png', blur_levels)
     X = []
     y = []
-    for i in range(32, 126):
+    for i in range(32, 127):
         img = load_image('out/{}.png'.format(i))
         h, w = img.shape
         images = generate_blurred_images(img, min(w/8, h/8)/2, blur_levels)
         scene = score_rect(images, 0, 0, w, h, w/8, h/8, blur_levels)
-        #print(scene[0][1])
 
-        # Use the blur levels as the training feature
-        X.append(sum(scene[0]))
-        y.append('out/{}.png'.format(i))
+        # Use the blurred image vectors to train
+        fv = []
+        for j in range(blur_levels):
+            fv.extend(scene[0][j])
 
-    clf = svm.SVC(gamma=0.001, C=100)
+        X.append(fv)
+        y.append(i)
+
+    clf = svm.SVC()
 
     X = np.array(X)
     y = np.array(y)

@@ -51,10 +51,10 @@ def score_all(image, cell_width, cell_height, r_sections=5, theta_sections=12):
         (cell_height/2),
         (cell_width/2),
         total_bins))
-    print(cell_height, cell_width, total_bins)
+    #print(cell_height, cell_width, total_bins)
     for yi, y in enumerate(range(padding, h+padding, cell_height)):
         for xi, x in enumerate(range(padding, w+padding, cell_width)):
-            print(xi, yi, x, y)
+            #print(xi, yi, x, y)
             scores[yi, xi] = score_cell(blurred, cell_width, cell_height,
                     x, y, x_offsets, y_offsets)
     # Calculate total amount of ink
@@ -124,8 +124,8 @@ def generate_offsets_per_bin(r, r_sections=5, theta_sections=12):
     for bin_index in range(len(x_offsets)):
         x_offsets[bin_index] = np.array(x_offsets[bin_index], dtype=np.int)
         y_offsets[bin_index] = np.array(y_offsets[bin_index], dtype=np.int)
-    print('theta sections', per_theta)
-    print('radius sections', per_radii)
+    #print('theta sections', per_theta)
+    #print('radius sections', per_radii)
     _offsets_cache[(r, r_sections, theta_sections)] = x_offsets, y_offsets
     return x_offsets, y_offsets
 

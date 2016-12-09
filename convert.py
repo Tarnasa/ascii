@@ -9,8 +9,6 @@ from skimage import io
 from scipy.misc import imresize
 import numpy as np
 
-from polar import score_all
-
 from sklearn import svm
 
 Alphabet = namedtuple('Alphabet', ('scores', 'cw', 'ch'))
@@ -37,7 +35,6 @@ def convert(image, alphabet, blur_levels=3):
     blur_factor = min(cw/8, ch/8)/2
     #blur_factor = 0
     images = generate_blurred_images(image, blur_factor, blur_levels)
-    print(score_all(images[0], cw, ch))
 
     art = []
     for yi, y in enumerate(range(0, h, ch)):
@@ -120,9 +117,6 @@ def svm_train(blur_levels=3):
         fv = []
         for j in range(blur_levels):
             fv.extend(scene[0][j])
-
-        #print(score_all(images[0], alphabet.cw, alphabet.ch))
-
 
         X.append(fv)
         y.append(i)

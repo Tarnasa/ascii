@@ -88,7 +88,10 @@ def generate_alphabet(pattern, levels=3):
 if __name__ == '__main__':
     alphabet = generate_alphabet('out/*.png')
     
-    image = load_image(sys.argv[1] or 'test.png')
+    if len(sys.argv) < 2:
+        print("Usage: python convert.py <image file>")
+        sys.exit()
+    image = load_image(sys.argv[1])
 
     print("Nearest Neighbor Classification:")
     start = time.time()

@@ -42,6 +42,8 @@ def svm_multisample(blur_levels=3):
     X = [d[1:] for d in data]
     y = [d[0] for d in data]
 
+    print("{} training samples".format(len(y)))
+
     clf.fit(X,y)
     #print("Training complete")
     return clf

@@ -8,6 +8,7 @@ from collections import namedtuple
 from skimage import io
 from scipy.misc import imresize
 import numpy as np
+import sys
 import ocr_svm
 import time
 
@@ -86,7 +87,8 @@ def generate_alphabet(pattern, levels=3):
 
 if __name__ == '__main__':
     alphabet = generate_alphabet('out/*.png')
-    image = load_image('test.png')
+    
+    image = load_image(sys.argv[1] or 'test.png')
 
     print("Nearest Neighbor Classification:")
     start = time.time()
@@ -103,11 +105,10 @@ if __name__ == '__main__':
     print("Conversion time: {}s".format(time.time() - conv))
     print(art)
 
-    print("SVM with many fonts as training samples:")
+    print("SVM with characters rendered in multiple fonts as training samples:")
     svm = ocr_svm.svm_multisample(3)
     print("Training time: {}s".format(time.time() - start))
     conv = time.time()
     art = convert(image, alphabet, svm, 3)
     print("Conversion time: {}s".format(time.time() - conv))
     print(art)
-

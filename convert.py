@@ -8,6 +8,9 @@ from collections import namedtuple
 from skimage import io
 from scipy.misc import imresize
 import numpy as np
+import sys
+import ocr_svm
+import time
 
 Alphabet = namedtuple('Alphabet', ('scores', 'cw', 'ch'))
 
@@ -20,43 +23,39 @@ def fit(w, h, subw, subh):
     new_h = subh * int(h / float(subh) + 0.5)
     return new_w, new_h
 
-
-def convert(image, alphabet):
+def convert(image, alphabet, svm=None, blur_levels=3):
     ch, cw = alphabet.ch, alphabet.cw
     h, w = image.shape
     w, h = fit(w, h, cw, ch)
     image = imresize(image*255, (h, w), interp='bilinear')
     image = image.astype(np.float32) / 255.
     blur_factor = min(cw/8, ch/8)/2
-    blur_factor = 0
-    images = generate_blurred_images(image, blur_factor, 3)
+    images = generate_blurred_images(image, blur_factor, blur_levels)
     art = []
     for yi, y in enumerate(range(0, h, ch)):
         line = []
         for xi, x in enumerate(range(0, w, cw)):
-            print(xi, yi, x, y)
-            scene = score_rect(images, x, y, cw, ch, cw/8, ch/8, 3)
-            filename = find_best_char(scene, alphabet)
+            scene = score_rect(images, x, y, cw, ch, cw/8, ch/8, blur_levels)
+            if not svm:
+                char = int(find_best_char(scene, alphabet)[4:-4])
+            else:
+                fv = []
+                for j in range(blur_levels):
+                    fv.extend(scene.features[j])
+                fv = np.array(fv).reshape(1, -1)
 
-            if xi == 22 and yi == 20:
-                print('hey', filename, compare_scores(scene, alphabet.scores[filename]))
-                print('space', filename, compare_scores(scene, alphabet.scores['out/32.png']))
-                print('light', scene.norm)
-                print('light', alphabet.scores['out/126.png'].norm)
-            if xi == 33 and yi == 20:
-                print('light', scene.norm)
+                char = int(svm.predict(fv)[0])
 
-            line.append(chr(int(filename[4:-4])))
+            line.append(chr(char))
         art.append(line)
     return '\n'.join(''.join(line) for line in art)
-
 
 def find_best_char(scene, alphabet):
     return min(alphabet.scores.items(),
             key=lambda pair: compare_scores(scene, pair[1]))[0]
 
 def load_image(filename):
-    print('loading ...', filename)
+    #print('loading ...', filename)
     image = io.imread(filename)
     image = image.astype(np.float32)
     m = np.max(image)
@@ -75,7 +74,6 @@ def generate_alphabet(pattern, levels=3):
         image = load_image(filename)
         h, w = image.shape
         blur_factor = min(w/8, h/8)/2
-        blur_factor = 0
         images = generate_blurred_images(image, blur_factor, levels)
 
         if filename == '!out/126.png':
@@ -83,28 +81,34 @@ def generate_alphabet(pattern, levels=3):
             fig, ax = plt.subplots()
             ax.imshow(images[2], cmap='gray', interpolation='nearest')
             plt.show()
-
         scene = score_rect(images, 0, 0, w, h, w/8, h/8, levels)
         scenes[filename] = scene
     return Alphabet(scenes, w, h)
 
 if __name__ == '__main__':
-    """
-    sp = load_image('out/33.png')
-    print(repr(sp))
-    import sys
-    sys.exit(0)
-    """
-
     alphabet = generate_alphabet('out/*.png')
-    image = load_image('test.png')
-    art = convert(image, alphabet)
+    
+    image = load_image(sys.argv[1] or 'test.png')
+
+    print("Nearest Neighbor Classification:")
+    start = time.time()
+    art = convert(image, alphabet, None, 3)
+    print("Run time: {}s".format(time.time() - start))
     print(art)
 
-    img = load_image('out/33.png')
-    h, w = img.shape
-    images = generate_blurred_images(img, min(w/8, h/8)/2, 3)
-    scene = score_rect(images, 0, 0, w, h, w/8, h/8, 3)
-    thing = find_best_char(scene, alphabet)
-    print(compare_scores(alphabet.scores[thing], scene))
+    print("SVM with target font as training sample:")
+    start = time.time()
+    svm = ocr_svm.svm_single(3)
+    print("Training time: {}s".format(time.time() - start))
+    conv = time.time()
+    art = convert(image, alphabet, svm, 3)
+    print("Conversion time: {}s".format(time.time() - conv))
+    print(art)
 
+    print("SVM with characters rendered in multiple fonts as training samples:")
+    svm = ocr_svm.svm_multisample(3)
+    print("Training time: {}s".format(time.time() - start))
+    conv = time.time()
+    art = convert(image, alphabet, svm, 3)
+    print("Conversion time: {}s".format(time.time() - conv))
+    print(art)

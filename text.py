@@ -37,7 +37,7 @@ s_command = """
 """
 
 
-def render_text_to_file(text, filename, font='DejaVu-Sans-Mono', size=12):
+def render_text_to_file(text, filename, font='DejaVu-Sans-Mono', size=12, scale='20x39!'):
     if type(size) == int:
         size = str(size)
     if text == '\\':
@@ -49,6 +49,7 @@ def render_text_to_file(text, filename, font='DejaVu-Sans-Mono', size=12):
         '-font', font,
         '-stroke', 'black',
         '-pointsize', size,
+        '-liquid-rescale', scale,
         "label:{}".format(text), filename
     ]
     print(' '.join(command))

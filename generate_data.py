@@ -92,5 +92,5 @@ def extract_features(blur_levels=3):
     print("Done! Generated {} training samples".format(len(directories) * len(ASCII)))
 
 if __name__ == "__main__":
-   #render_fonts()
+   render_fonts()
    extract_features()

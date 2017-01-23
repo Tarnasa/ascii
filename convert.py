@@ -3,16 +3,13 @@ Put it all together now,
 """
 
 from multiblur import score_rect, compare_scores, generate_blurred_images
-from glob import glob
-from collections import namedtuple
-from skimage import io
 from scipy.misc import imresize
 import numpy as np
 import sys
 import ocr_svm
 import time
+from utility import generate_alphabet, load_image
 
-Alphabet = namedtuple('Alphabet', ('scores', 'cw', 'ch'))
 
 def fit(w, h, subw, subh):
     """
@@ -54,39 +51,8 @@ def find_best_char(scene, alphabet):
     return min(alphabet.scores.items(),
             key=lambda pair: compare_scores(scene, pair[1]))[0]
 
-def load_image(filename):
-    #print('loading ...', filename)
-    image = io.imread(filename)
-    image = image.astype(np.float32)
-    m = np.max(image)
-    image /= m
-    if len(image.shape) == 3:
-        image = 1 - np.min(image, axis=2)
-    else:
-        image = 1 - image
-    return image
-
-
-def generate_alphabet(pattern, levels=3):
-    scenes = dict()
-    filenames = glob(pattern)
-    for filename in filenames:
-        image = load_image(filename)
-        h, w = image.shape
-        blur_factor = min(w/8, h/8)/2
-        images = generate_blurred_images(image, blur_factor, levels)
-
-        if filename == '!out/126.png':
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.imshow(images[2], cmap='gray', interpolation='nearest')
-            plt.show()
-        scene = score_rect(images, 0, 0, w, h, w/8, h/8, levels)
-        scenes[filename] = scene
-    return Alphabet(scenes, w, h)
-
 if __name__ == '__main__':
-    alphabet = generate_alphabet('out/*.png')
+    alphabet = generate_alphabet('out/*.png', 1)
     
     if len(sys.argv) < 2:
         print("Usage: python convert.py <image file>")
@@ -95,7 +61,7 @@ if __name__ == '__main__':
 
     print("Nearest Neighbor Classification:")
     start = time.time()
-    art = convert(image, alphabet, None, 3)
+    art = convert(image, alphabet, None, 1)
     print("Run time: {}s".format(time.time() - start))
     print(art)
 
@@ -112,6 +78,6 @@ if __name__ == '__main__':
     svm = ocr_svm.svm_multisample(3)
     print("Training time: {}s".format(time.time() - start))
     conv = time.time()
-    art = convert(image, alphabet, svm, 3)
+    art = convert(image, alphabet, svm, 1)
     print("Conversion time: {}s".format(time.time() - conv))
     print(art)

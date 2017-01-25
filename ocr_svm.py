@@ -1,6 +1,6 @@
 from sklearn import svm
 from multiblur import score_rect, compare_scores, generate_blurred_images
-from convert import generate_alphabet, load_image
+from utility import generate_alphabet, load_image
 import os
 import numpy as np
 

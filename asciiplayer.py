@@ -8,7 +8,7 @@ import subprocess
 import sys
 import json
 
-def play(frames):
+def play(frames, allow_buffer_wait=False):
     """
     Plays an ascii art movie
     Arguments:
@@ -35,15 +35,17 @@ def play(frames):
                 print(frame)
                 time.sleep(wait_time)
             else:
+                # Drop the frame
                 dropped += 1
-                start = time.time() - (seek / 1000.0)
+                if allow_buffer_wait:
+                    # Reset the time; desynchronizes ffplay audio but allows realtime conversion/playback
+                    start = time.time() - (seek / 1000.0)
         except KeyboardInterrupt, Exception:
             playing = False
 
     print("Dropped frames: {}".format(dropped))
 
 if __name__ == "__main__":
-    
     frame_queue = JoinableQueue()
     player = Process(target=play, args=(frame_queue,))
     player.start()
@@ -51,7 +53,10 @@ if __name__ == "__main__":
     with open(sys.argv[1]) as file:
         shortname = "".join(sys.argv[1].split(".")[0])
         movie = json.load(file)
-        
+    frames = []
+    for seek in sorted(movie["frames"], key=float)[10:]:#, None, float(movie["fps"]))
+        frames.append((float(seek), str(movie["frames"][str(seek)])))
+
     subprocess.Popen(["ffplay", "-nodisp", "-autoexit", "{}.mp4".format("".join(sys.argv[1].split(".")[0]))], stdout=subprocess.PIPE, stderr = subprocess.STDOUT)
 
     for seek in sorted(movie["frames"], key=float)[10:]:#, None, float(movie["fps"]))

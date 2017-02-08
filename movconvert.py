@@ -35,18 +35,22 @@ def multiprocessing_ascii_frame(data):
     """
     return ascii_frame(*data)
 
-def convert_movie(movie_path, resolution=(3200, 1800), max_ram=6000000, realtime=False):
+def convert_movie(movie_path, resolution=(4050, 2400), max_ram=6000000, realtime=False):
     """
     Converts a movie to ascii art
     """
-    resolution = (1600, 900)
+    #resolution = (1500, 700) # Approximate star wars telnet size
+    #resolution = (3200, 1800) 
+    #resolution = (800, 450) # For realtime
+
 
     alphabet = generate_alphabet('out/*.png', 1)
-    svm = ocr_svm.svm_single(1)
+    svm = ocr_svm.svm_single(alphabet, 1)
     vidcap = cv2.VideoCapture(movie_path)
     success = True
     i = 0
     chunk = 0
+
 
 
     total_frames = int(vidcap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
@@ -67,10 +71,10 @@ def convert_movie(movie_path, resolution=(3200, 1800), max_ram=6000000, realtime
     player, frame_queue = None, None
 
     if realtime:
-        frames_per_chunk=400
+        frames_per_chunk=7
         total_chunks = int(ceil(total_frames/float(frames_per_chunk)))
         frame_queue = JoinableQueue()
-        player = Process(target=play, args=(frame_queue,))
+        player = Process(target=play, args=(frame_queue,realtime))
         player.start()
 
 
@@ -79,7 +83,7 @@ def convert_movie(movie_path, resolution=(3200, 1800), max_ram=6000000, realtime
             sys.stdout.write("\r" + " " * 100)
             sys.stdout.flush()
 
-        pool = Pool(6)
+        pool = Pool(7)
         jobs = []
         images = []
         chunk += 1
@@ -118,12 +122,13 @@ def convert_movie(movie_path, resolution=(3200, 1800), max_ram=6000000, realtime
 
         while True:
             remaining = results._number_left
+            if results.ready(): 
+                break
             if not realtime:
                 sys.stdout.write("\rConverting... {}/{} ({}%)".format(total - remaining, total, int((total - remaining)/float(total) * 100)))
                 sys.stdout.write(" in chunk {}/{} (Overall: {}%)".format(chunk, total_chunks, int((chunk - 1 + (total - remaining)/float(total))/ (total_chunks) * 100)))
                 sys.stdout.flush()
-            if results.ready(): 
-                break
+
 
             time.sleep(0.2)
 
@@ -139,21 +144,20 @@ def convert_movie(movie_path, resolution=(3200, 1800), max_ram=6000000, realtime
             
 
         del pool, results, jobs, images
-
-
+    if realtime:
+        frame_queue.put("END")
     print(" Done!")
+
+    asciimovie = dict(zip(seek, frames))
 
     if realtime:
         player.join()
     else:
-        asciimovie = dict(zip(seek, frames))
         with open(movie_path + ".ascii", "w") as file:
             json.dump({'frames':asciimovie, 'fps':fps}, file)
             print("Saved as {}.ascii".format(movie_path))
+            print("Use `./asciiplayer.py {}.ascii` to play".format(movie_path))
     return asciimovie
 
 if __name__ == "__main__":
     asciimovie = convert_movie(sys.argv[1], realtime=False)
-    #for seektime in sorted(asciimovie.keys(), key=float):
-    #    print(asciimovie[seektime])
-    #    time.sleep(1/float(fps))

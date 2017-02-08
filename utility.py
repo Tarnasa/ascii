@@ -3,8 +3,11 @@ from skimage import io
 import numpy as np
 from multiblur import score_rect, generate_blurred_images
 from collections import namedtuple
+import os, time, sys
+from math import ceil
+import difflib
 
-
+ASCII = range(32, 127)
 Alphabet = namedtuple('Alphabet', ('scores', 'cw', 'ch'))
 
 def generate_alphabet(pattern, levels=3):

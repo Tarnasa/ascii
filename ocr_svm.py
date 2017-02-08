@@ -4,9 +4,7 @@ from utility import generate_alphabet, load_image
 import os
 import numpy as np
 
-
-def svm_single(blur_levels=3):
-    alphabet = generate_alphabet('out/*.png', blur_levels)
+def svm_single(alphabet, blur_levels=3):
     X = []
     y = []
     for i in range(32, 127):

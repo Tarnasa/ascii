@@ -32,7 +32,7 @@ def play(frames, allow_buffer_wait=False):
             wait_time = seek/1000.0 - (time.time() - start)
 
             if wait_time >= 0: 
-                print(frame)
+                print('\x1b[H' + frame)
                 time.sleep(wait_time)
             else:
                 # Drop the frame
